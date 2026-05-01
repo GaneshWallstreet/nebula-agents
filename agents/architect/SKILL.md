@@ -4,10 +4,10 @@ description: "Designs system architecture, data models, API contracts, and techn
 compatibility: ["manual-orchestration-contract"]
 metadata:
   allowed-tools: "Read Write Edit AskUserQuestion"
-  version: "2.2.0"
+  version: "2.3.0"
   author: "Nebula Framework Team"
   tags: ["architecture", "design", "planning"]
-  last_updated: "2026-03-21"
+  last_updated: "2026-04-30"
 ---
 
 # Architect Agent
@@ -93,6 +93,7 @@ Your responsibility is to define **HOW** to build what the Product Manager speci
   - Follow REST patterns from SOLUTION-PATTERNS.md (/{resource}/{id})
    - Specify request/response schemas using OpenAPI
    - Define error responses (ProblemDetails pattern)
+   - When the boundary is dataset- or event-shaped (imports, exports, batch feeds, outbox events, stream/topic publication) rather than synchronous request/response, see `references/data-contract-patterns.md` to choose the appropriate contract format (ODCS for datasets, AsyncAPI for events) and how it composes with the API contract stack rather than replacing it.
 
 7) **Define validation schemas**
    - Create JSON Schemas for all request/response models
