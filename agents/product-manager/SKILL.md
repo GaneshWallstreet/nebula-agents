@@ -111,11 +111,13 @@ When any prioritization framework is used, include:
 - Write user stories (As a / I want / So that)
 - Define acceptance criteria
 - Specify edge cases and errors
+- For any story that uses mutation language such as `capture`, `edit`, `save`, `update`, `manage`, `submit`, `approve`, `assign`, or `transition`, include an explicit interaction contract covering screen/entry point, editable versus read-only states, save/reload behavior, allowed roles, lifecycle/status constraints, validation failure behavior, and persistence evidence. Do not let a rendered read-only view satisfy a capture/save/edit story.
 
 4) **Screens & Workflows**
 - Define screen list and purposes
 - Map key workflows across screens
 - Include ASCII screen layouts in the PRD's `## Screen Layouts (ASCII)` section whenever the feature introduces or materially modifies a user-visible screen, zone, or multi-step flow. Provide at minimum a Desktop variant plus one narrow variant (Mobile or iPad) for responsive screens. Omit only for features with no UI surface, and state the reason explicitly (e.g. "No UI — integration job only").
+- For each user-visible workflow, identify the user entry point that starts it (for example list row click, dashboard CTA, detail page action, wizard step, or background-triggered review) and the terminal evidence that proves it completed (for example persisted value after reload, timeline event, downstream state, or generated artifact).
 
 5) **Validation**
 - Ensure requirements trace to user needs
@@ -308,17 +310,19 @@ Before declaring work complete, verify deliverables:
 5. Walk through each story — does every story have measurable acceptance criteria?
 6. If any AC is vague or untestable → rewrite, re-check
 7. Verify no story invents business rules not provided by stakeholders
-8. For prioritization outputs, verify framework choice matches decision type and assumptions are explicit
-9. For completed features, execute mandatory archive transition and path/status updates
-10. Re-run story index + tracker validation after archive move
-11. Complete post-session knowledge capture (responsibility #6) — save non-obvious decisions and gotchas to KG notes, feature docs, or STATUS.md
-12. Only declare Definition of Done when stories validate, tracker checks pass, and archive transition is complete (for completed features)
+8. For every story containing capture/edit/save/update/manage/submit/approve/assign/transition language, verify the story includes an interaction contract and cannot be satisfied by render-only behavior unless explicitly marked read-only
+9. For prioritization outputs, verify framework choice matches decision type and assumptions are explicit
+10. For completed features, execute mandatory archive transition and path/status updates
+11. Re-run story index + tracker validation after archive move
+12. Complete post-session knowledge capture (responsibility #6) — save non-obvious decisions and gotchas to KG notes, feature docs, or STATUS.md
+13. Only declare Definition of Done when stories validate, tracker checks pass, and archive transition is complete (for completed features)
 
 ## Definition of Done
 
 - [ ] Vision + non-goals documented
 - [ ] Personas defined
 - [ ] Features/stories written with acceptance criteria
+- [ ] Mutation stories include interaction contracts and are not closable by render-only behavior unless explicitly read-only
 - [ ] Screens specified (with ASCII layouts in PRD `## Screen Layouts (ASCII)` for UI-bearing features, or explicit "No UI" justification)
 - [ ] REGISTRY/ROADMAP/STORY-INDEX/BLUEPRINT are in sync
 - [ ] Completed feature moved to `{PRODUCT_ROOT}/planning-mds/features/archive/` and links updated

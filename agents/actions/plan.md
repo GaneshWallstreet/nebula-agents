@@ -159,6 +159,7 @@ Run in this order:
    - [ ] User stories have acceptance criteria
    - [ ] Screen responsibilities specified
    - [ ] ASCII screen layouts present in `## Screen Layouts (ASCII)` for every UI-bearing feature (Desktop + narrow variant), or a written "No UI" justification if omitted
+   - [ ] Mutation stories include interaction contracts and distinguish display-only/read-only behavior from editable save behavior
    - [ ] Minimal ontology stub exists for each touched feature (`id`, `path`, `status`, obvious dependencies/high-confidence affected nodes)
    - [ ] No invented business rules (all traced to user needs)
    - [ ] No TODOs remain in Section 3
@@ -186,6 +187,8 @@ Run in this order:
    - Undefined dependencies
    - Unstated assumptions
    - Features without clear success criteria
+   - Mutation language (`capture`, `edit`, `save`, `update`, `manage`, `submit`, `approve`, `assign`, `transition`) without an interaction contract that names entry points, editable/read-only states, persistence evidence, roles, lifecycle/status constraints, validation failures, and audit/timeline expectations
+   - Phrases like "display or capture", "view or edit", or "manage" that allow render-only implementation to satisfy a save/edit requirement
 
 2. **Identify specific issues:**
 
@@ -238,6 +241,18 @@ Run in this order:
    - When are emails sent? (immediate? batched?)
    - What if email fails to send?
    - Unsubscribe option required?
+
+   ### Mutation / Interaction Contract Gaps
+
+   **Story:** "Users can display or capture product attributes"
+   **Issues:** "Display or capture" can be implemented as read-only rendering without an enabled save path
+   **Questions:**
+   - Which exact screens and entry points must be editable, not just visible?
+   - Which lifecycle states and roles allow editing?
+   - What user action starts editing, and what controls are required (Edit, Save, Cancel, Submit, etc.)?
+   - What backend write path or system mutation must occur?
+   - What proves persistence after save (reload, query invalidation, timeline event, downstream state)?
+   - What happens for legacy, archived, terminal, or otherwise read-only records?
    ```
 
 3. **Ask user for clarifications:**
@@ -282,6 +297,8 @@ Run in this order:
    - [ ] File upload/download specs complete (types, sizes, errors)
    - [ ] Notification specs complete (when, who, how, failures)
    - [ ] Search/filter specs complete (fields, operators, performance)
+   - [ ] Every mutation story has an interaction contract: screen/entry point, action, editable state, save result, persistence evidence, role/status rules, validation failure, and audit/timeline expectation
+   - [ ] Any story containing "display or capture", "view or edit", or "manage" has been split or clarified so read-only rendering cannot accidentally satisfy editable behavior
 
 **Anti-Patterns to Catch:**
 
@@ -291,12 +308,15 @@ Banned words that indicate vagueness:
 - ❌ "fast", "quick", "slow", "performant", "responsive"
 - ❌ "secure", "safe", "protected" (without specifics)
 - ❌ "scalable", "flexible", "robust" (without metrics)
+- ❌ "display or capture", "view or edit", "manage" (without separate read and mutation requirements)
+- ❌ "save" or "update" (without entry point, role/status, validation, persistence, and audit/timeline expectations)
 
 Replace with:
 - ✅ "must" (requirement), "may" (optional)
 - ✅ Specific metrics ("< 200ms p95", "≥ 80% success rate")
 - ✅ Explicit error handling ("show error: 'File too large'")
 - ✅ Quantified criteria ("support 10,000 concurrent users")
+- ✅ Explicit interaction contracts ("Policy Detail entered from Policy List -> Edit -> Save -> persisted after reload; allowed for Pending only; emits PolicyUpdated")
 
 **Gate Criteria:**
 - [ ] All underspecified areas identified
@@ -305,6 +325,7 @@ Replace with:
 - [ ] No ambiguous language remains
 - [ ] All acceptance criteria testable
 - [ ] Edge cases and errors documented
+- [ ] All mutation stories include interaction contracts and cannot pass with render-only tests unless explicitly read-only
 
 **If Clarifications Complete:**
 - Proceed to Step 2 (Approval Gate)

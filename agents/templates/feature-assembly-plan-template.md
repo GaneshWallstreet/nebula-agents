@@ -84,6 +84,20 @@ Use this template for solution feature planning. If generic framework work under
 5. `unitOfWork.CommitAsync(ct)`
 6. Return {mapped DTO}
 
+### Mutation Traceability (Required for Capture/Edit/Save/Update Steps)
+
+Complete this section for every PM story or screen interaction that mutates state. If this step is read-only, state `N/A — read-only`.
+
+| Screen / Entry Point | User Action | Endpoint | Service Method | Entity / Carrier | Authorization | Concurrency | Validation Failure | Audit / Timeline | Test Expectation |
+|----------------------|-------------|----------|----------------|------------------|---------------|-------------|--------------------|------------------|------------------|
+| {route or screen flow} | {Edit/Save/etc.} | `{METHOD /path}` | `{Service.Method}` | `{Entity.Field}` | `{resource}:{action}` | `{If-Match/rowVersion/etc.}` | `{status/code/body}` | `{EventType or N/A reason}` | `{integration/E2E proof after reload}` |
+
+Mutation traceability rules:
+- Render-only behavior cannot satisfy a capture/edit/save/update/manage story unless the PM artifact explicitly says the surface is read-only.
+- Every enabled save action needs a named endpoint or service mutation, even if it reuses an existing endpoint.
+- Every mutation needs role/status eligibility, validation/error behavior, and persistence evidence.
+- Legacy, archived, terminal, or otherwise read-only states must be explicitly separated from editable states.
+
 ### Casbin Enforcement
 
 - Resource: `{resource}`, Action: `{action}`
@@ -161,6 +175,8 @@ Step N (QE):          {description}
 - [ ] Developer-owned fast-test responsibilities identified by layer
 - [ ] Required runtime evidence artifacts identified (coverage/report/log paths as applicable)
 - [ ] Framework vs solution boundary reviewed (no accidental `agents/**` drift in feature scope)
+- [ ] Mutation traceability tables completed for every capture/edit/save/update/manage/submit/approve/assign/transition path
+- [ ] Render-only tests are not used to close mutation stories unless the story explicitly states read-only behavior
 - [ ] Run/deploy instructions updated
 
 ## Risks and Blockers

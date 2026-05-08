@@ -48,6 +48,20 @@ Use Given/When/Then or a checklist. Be specific and testable.
 - [ ] [Specific, testable condition]
 - [ ] [Specific, testable condition]
 
+## Interaction Contract (Required for Capture/Edit/Save/Update Stories)
+
+Complete this section when the story uses mutation language such as `capture`, `edit`, `save`, `update`, `manage`, `submit`, `approve`, `assign`, or `transition`. If the story is read-only, state `N/A — read-only story`.
+
+| Surface / Entry Point | User Action | Editable State | Save / Mutation Result | Reload / Persistence Evidence | Roles / Status Constraints |
+|-----------------------|-------------|----------------|-------------------------|-------------------------------|----------------------------|
+| [Screen or route, e.g. List -> Detail] | [Click/Edit/Save/etc.] | [Enabled, disabled, read-only rules] | [What changes] | [How a test proves it persisted] | [Allowed roles and lifecycle states] |
+
+Required checks for mutation stories:
+- [ ] Render-only behavior cannot satisfy the story unless the story is explicitly read-only.
+- [ ] The save path has validation and error behavior specified.
+- [ ] A successful mutation has an audit/timeline/event expectation or an explicit N/A reason.
+- [ ] Tests prove the user can perform the action from the named entry point and observe persisted state after reload/query invalidation.
+
 ## Data Requirements
 
 **Required Fields:**

@@ -119,6 +119,7 @@ Your responsibility is to define **HOW** to build what the Product Manager speci
      - **Code signatures:** full C# record/class definitions for entities, DTOs, validators, and service method signatures
      - **Logic flows:** numbered step-by-step service method logic with guard conditions, error codes, timestamp/audit field handling, and timeline event emission
      - **Per-endpoint detail:** Casbin enforcement pattern (resource, action, attribute hydration), HTTP response tables (status, body, condition), and endpoint registration code
+     - **Mutation traceability:** for every PM story or screen interaction that says `capture`, `edit`, `save`, `update`, `manage`, `submit`, `approve`, `assign`, or `transition`, map `Screen / entry point -> user action -> endpoint -> service method -> entity/carrier -> authorization action -> concurrency / rowVersion behavior -> validation failure -> audit/timeline evidence -> test expectation`. If any link is missing, stop and ask a clarifying question or update the plan before implementation kickoff.
      - **Migration SQL:** raw SQL for filtered/expression indexes, seed data, and schema changes that cannot be expressed via EF Core fluent API
      - **Integration checkpoints:** specific, testable criteria per build phase (not generic checklists)
    - Reference the execution plan from the umbrella `{PRODUCT_ROOT}/planning-mds/architecture/feature-assembly-plan.md` section for the feature (cross-feature sequencing view)
@@ -398,10 +399,11 @@ Before declaring work complete, verify each deliverable:
 6. Verify C4 L2 container diagram reflects all services present in docker-compose (or equivalent)
 7. Validate tracker consistency when planning trackers were touched during architecture updates (manually or by delegating `agents/product-manager/scripts/validate-trackers.py`)
 8. Verify feature assembly execution plan (`{PRODUCT_ROOT}/planning-mds/features/F{NNNN}-{slug}/feature-assembly-plan.md`) exists and is implementation-ready: every API endpoint has a corresponding Step with file paths, code signatures, logic flow, Casbin pattern, and HTTP response table. Cross-check against OpenAPI endpoints — no endpoint should be missing from the plan.
-9. If inconsistencies found → fix, re-validate
-10. Complete post-session knowledge capture (responsibility #13) — save non-obvious decisions and gotchas to KG notes, ADRs, or feature docs
-11. Complete structural KG updates (responsibility #14) — add rationale entries for new ADRs, canonical nodes for new design elements, code-index bindings for new artifacts, and run `validate.py` clean
-12. Only declare Definition of Done when all cross-checks pass
+9. Verify mutation traceability for every capture/edit/save/update/manage/submit/approve/assign/transition story: no read-only rendering can satisfy a mutation story unless explicitly marked read-only, and every mutation has endpoint/service/carrier/auth/concurrency/audit/test coverage.
+10. If inconsistencies found → fix, re-validate
+11. Complete post-session knowledge capture (responsibility #13) — save non-obvious decisions and gotchas to KG notes, ADRs, or feature docs
+12. Complete structural KG updates (responsibility #14) — add rationale entries for new ADRs, canonical nodes for new design elements, code-index bindings for new artifacts, and run `validate.py` clean
+13. Only declare Definition of Done when all cross-checks pass
 
 ## Definition of Done
 
