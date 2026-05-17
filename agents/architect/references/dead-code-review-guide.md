@@ -118,7 +118,7 @@ Score clamps to `[0, 1]`.
 
 | Band | Score | Meaning |
 |---|---|---|
-| `weak` | 0.5–0.69 | Likely an artifact of same-node-only call resolution. Inspect, but do not remove without source-level confirmation |
+| `weak` | 0.5–0.69 | Lower confidence — for C# usually a code-index-coverage gap (a calling file isn't bound), for TS/Python usually a cross-node call the same-node resolver missed. Inspect, do not remove without source-level confirmation |
 | `default` | 0.7–0.84 | Plausible candidate. Default `--min-confidence`. Triage at feature close |
 | `safe` | 0.85–1.0 | High-confidence candidate. `--safe-only` threshold. Default architect gate at release readiness |
 
@@ -135,14 +135,25 @@ the real reachability signal.
 
 ### Known limitations
 
-Call edges in `symbol-index.yaml` are resolved by name within the **same
-canonical node** (see [symbol-index-guide.md](symbol-index-guide.md) §"How
-`code-index.yaml` and `symbol-index.yaml` compose"). Cross-node calls (an
-endpoint on `entity:order` invoking a service method on `entity:customer`)
-are invisible to the reachability walk. The confidence dampers compensate by
-lowering the score when a symbol's node has feature-mapping refs that could
-carry an untracked cross-node flow, but some genuine false positives remain.
-The triage rubric below explains how to recognize them.
+Call-edge resolution is per-language (see [symbol-index-guide.md](symbol-index-guide.md)
+"Field reference"):
+
+- **C#** — semantically resolved via Roslyn `SemanticModel`. Cross-node
+  calls and interface dispatch are correctly tracked. The remaining
+  blind spot is **code-index coverage**: a calling file that isn't
+  bound in `code-index.yaml` is never parsed, so its invocations don't
+  appear in the call graph. When a method looks dead, first verify
+  every caller file is bound.
+- **TypeScript** and **Python** — name-matched within the same canonical
+  node only. Cross-node calls are invisible to the walk. The confidence
+  dampers compensate by lowering the score when a symbol's node has
+  feature-mapping refs that could carry an untracked cross-node flow,
+  but some genuine false positives remain. Upgrading these extractors
+  to emit semantically-resolved calls is the same kind of work as the
+  C# Roslyn integration.
+
+The triage rubric below explains how to recognize each class of false
+positive.
 
 ---
 
@@ -154,11 +165,17 @@ For each candidate, ask in order:
    pattern list missed?** (e.g., `RegisterRoutes`, `OnModelCreating`,
    `BuildContainer`). If yes, extend `FRAMEWORK_ENTRY_NAME_SUFFIXES` or
    `FRAMEWORK_ENTRY_FILE_PATTERNS` in `scripts/kg/symbols.py` and re-run.
-2. **Does an endpoint or test in a different canonical node call this
-   symbol?** (Grep the name; verify by file path.) If yes, this is a
-   same-node-resolution false positive — record the symbol in a per-product
-   ignore list referenced from a product ADR.
-3. **Is the symbol genuinely unused?** Delete it. Re-run
+2. **For C#: is every file that could call this symbol bound in
+   `code-index.yaml`?** Grep the codebase for the method name. If a
+   caller file shows up but isn't in `code-index.yaml`, the Roslyn
+   extractor never parsed it. Add the caller file to the appropriate
+   canonical node binding and regenerate. (This is the most common C#
+   false-positive class now that semantic resolution is in place.)
+3. **For TS/Python: does any file call this symbol from a different
+   canonical node?** Same-node-resolution false positive. Either bind
+   the calling file to the same canonical node, or record the symbol
+   in a per-product ignore list referenced from a product ADR.
+4. **Is the symbol genuinely unused?** Delete it. Re-run
    `python3 {PRODUCT_ROOT}/scripts/kg/symbols.py` + `dead-code.py` to confirm
    the report shrinks.
 
@@ -171,7 +188,8 @@ For each candidate, ask in order:
 | `policy_rule:order-export` is an orphan: no feature `enforced_by_policy` references it, and no code-index binding exists | Remove the node — premature. The next feature that needs export policy can re-add it. |
 | `adr:042` is an orphan: no canonical node lists it under `rationale.adr` | Add a `rationale:` entry on the node the ADR actually governs (e.g., `entity:order`). The ADR is the source of truth; the rationale link is what makes it discoverable. |
 | `entity:order-attachment` is an orphan but a planned feature folder under `planning-mds/features/F0044-order-attachments/` exists | Add the feature to `feature-mappings.yaml.coverage.excluded_features` until the feature is implemented; the orphan disappears. |
-| `dead-code.py` reports `CustomerService.GetByExternalIdAsync` at confidence 0.9; grep shows it called from `OrderImportEndpoints.cs` (different node) | Same-node-resolution false positive. Add a per-product ignore entry; consider whether the cross-node link warrants a code-index binding on `entity:customer` that also covers `OrderImportEndpoints.cs`. |
+| `dead-code.py` reports `CustomerService.GetByExternalIdAsync` at confidence 0.9; grep shows it called from `OrderImportEndpoints.cs` (different node), and that file is missing from `code-index.yaml` | Code-index coverage gap. Add `OrderImportEndpoints.cs` to the appropriate canonical-node binding (typically `entity:customer` or the endpoint's own node) and regenerate. The Roslyn extractor will resolve the call on the next run. |
+| `dead-code.py` reports a TS service method at confidence 0.9; grep shows it called from a different canonical node's file | Same-node-resolution limitation (TS extractor doesn't emit semantic types yet). Either bind the caller into the same canonical node, or add a per-product ignore entry. |
 | `dead-code.py` reports `LegacyOrderReceiptFormatter.Format` at confidence 0.9; grep shows zero references | Genuine dead code. Delete the file. Re-run `symbols.py`. |
 
 ---

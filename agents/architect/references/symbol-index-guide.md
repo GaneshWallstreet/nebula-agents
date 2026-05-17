@@ -85,12 +85,28 @@ symbols:
 | `signature` | string | First line of the declaration, attributes stripped. |
 | `visibility` | enum | `public \| internal \| protected \| private` (C#); `export \| local \| public` (TS); `public \| private` (Python). |
 | `language` | enum | `csharp \| typescript \| python` |
-| `callers` | string[] | Symbol ids that invoke this symbol (best-effort, name-matched within node). |
-| `callees` | string[] | Symbol ids this symbol invokes. |
+| `callers` | string[] | Symbol ids that invoke this symbol. Resolved semantically for C# (cross-node visible); name-matched within the same canonical node for TS and Python. |
+| `callees` | string[] | Symbol ids this symbol invokes. Same resolution model as `callers`. |
 
-Callers/callees are resolved by matching invoked names against other symbols
-on the **same canonical node**. Over-linking is acceptable — the layer is a
-routing aid, not a static-analysis report.
+Call-edge resolution is per-language:
+
+- **C#** — the Roslyn extractor builds a single `Compilation` across every
+  bound file, then resolves each `InvocationExpressionSyntax` via
+  `SemanticModel.GetSymbolInfo`. Each call is emitted as `{name, container}`
+  where `container` is the resolved declaring type. The orchestrator looks
+  up the callee globally on `(container, name)`, so cross-node calls
+  (endpoint → service, service → repository, controller → handler) resolve
+  correctly. For every method that satisfies an interface member or
+  overrides a base method, a synthetic edge is added from the interface
+  member to the impl so reaching `IFoo.Bar` walks into every `Foo.Bar`.
+- **TypeScript** and **Python** — the extractors emit bare invocation
+  names. The orchestrator matches names against other symbols on the
+  **same canonical node** as the caller. Cross-node calls are invisible to
+  the walk; over-linking within a node is acceptable.
+
+Over-linking and missed cross-node edges in TS/Python are both acceptable —
+the layer is a routing aid, not a static-analysis report. Raw source files
+remain authoritative per `solution-ontology.yaml.authority.precedence`.
 
 ---
 
