@@ -55,7 +55,7 @@ Load in this order when the work is feature-scoped:
 2. `agents/agent-map.yaml`
 3. `agents/docs/AGENT-USE.md`
 4. `agents/actions/feature.md`
-5. `{PRODUCT_ROOT}/planning-mds/features/F{NNNN}-{slug}/feature-assembly-plan.md`
+5. `{PRODUCT_ROOT}/planning-mds/features/F{NNNN}-{slug}/feature-assembly-plan.md` (the Primary Spec — authored in G0 Step 0 of this action; read once it exists, not a precondition)
 6. `{PRODUCT_ROOT}/planning-mds/knowledge-graph/solution-ontology.yaml`
 7. `{PRODUCT_ROOT}/planning-mds/knowledge-graph/canonical-nodes.yaml`
 8. `{PRODUCT_ROOT}/planning-mds/knowledge-graph/feature-mappings.yaml`
@@ -74,6 +74,7 @@ Load in this order when the work is feature-scoped:
 ## Primary Spec
 
 - `{PRODUCT_ROOT}/planning-mds/features/F{NNNN}-{slug}/feature-assembly-plan.md` is the canonical execution spec for feature implementation
+- It is **authored by this action at G0 (Step 0)** — it is not a `plan` deliverable and not a precondition (per `plan.md`, the assembly plan belongs to `feature.md` Step 0). On a clean first run it does not exist yet and G0 creates it; on a `drift-reconcile` or evidence-only rerun it already exists and G0 reconciles it instead of overwriting.
 - When the assembly plan conflicts with raw story text, follow the feature assembly plan and log the reconciliation
 
 ## Ownership Contract
@@ -914,7 +915,7 @@ Feature delivered! ✓
 ## Prerequisites
 
 Before running feature action:
-- [ ] Plan action completed for this feature
+- [ ] Plan action completed for this feature (stories + architecture signed off; the `feature-assembly-plan.md` is NOT a prerequisite — this action authors it at G0 Step 0)
 - [ ] Feature has clear user stories with acceptance criteria
 - [ ] Feature scope is small (2-5 days of work)
 - [ ] SOLUTION-PATTERNS.md exists

@@ -54,8 +54,8 @@ TIER DEFAULTS (start_tier, max_auto_tier; selected by MODE):
 PRIMARY_SPEC: {FEATURE_PATH}/feature-assembly-plan.md
 
 PRECONDITIONS:
-- Plan action signed off for {FEATURE_ID}
-- PRIMARY_SPEC exists
+- Plan action signed off for {FEATURE_ID} (feature stories and architecture available)
+- PRIMARY_SPEC (feature-assembly-plan.md) is NOT a precondition — it is authored in G0 Step 0 of this run (per feature.md Step 0 / plan.md): absent on a clean first run, present on drift-reconcile/rerun
 - Required runtime containers healthy (per feature.md "Runtime Preflight & Failure Triage")
 - `python3 {PRODUCT_ROOT}/scripts/kg/validate.py` exits 0 at start
 - {RUN_FOLDER} created and initial evidence-manifest.json present
@@ -68,7 +68,7 @@ CONTEXT LOADING ORDER (navigate; do not eager-load):
 4. agents/actions/feature.md
 5. `python3 {PRODUCT_ROOT}/scripts/kg/lookup.py {FEATURE_ID} --tier {start_tier} --run-id {RUN_ID} --telemetry-file {PRODUCT_ROOT}/.kg-state/telemetry.jsonl`
    — FIRST-PASS scope resolver; raw artifacts win on conflict.
-6. {FEATURE_PATH}/**   (PRIMARY_SPEC is required reading)
+6. {FEATURE_PATH}/**   (PRIMARY_SPEC is required reading once it exists; on a clean first run it is authored in G0 Step 0 before slice work)
 
 ON-DEMAND (only if linked by lookup, required by current gate, or required by drift repair):
 - {PRODUCT_ROOT}/planning-mds/knowledge-graph/solution-ontology.yaml
@@ -130,7 +130,9 @@ MODE BEHAVIOR:
 
 GATES (sequential, all mandatory; manifest status transitions: draft@G0 → in-progress@G1..G4.6 → approved@G4.7 → superseded later):
 
-G0   ARCHITECT ASSEMBLY PLAN VALIDATION
+G0   ARCHITECT ASSEMBLY PLAN AUTHORING + VALIDATION
+     - Step 0 (author): if PRIMARY_SPEC absent, Architect authors {FEATURE_PATH}/feature-assembly-plan.md from agents/templates/feature-assembly-plan-template.md using feature stories, BLUEPRINT.md, SOLUTION-PATTERNS.md, API contracts (per feature.md Step 0). On drift-reconcile/rerun: reconcile the existing plan, do not overwrite; log via workstate.py decision --topic plan-story-reconcile
+     - Step 0.5 (validate): scope split, agent dependencies, integration checkpoints, artifact ownership; initialize Required Signoff Roles matrix in {FEATURE_PATH}/STATUS.md
      - Produce {RUN_FOLDER}/g0-assembly-plan-validation.md (Result: PASS|PASS WITH RECOMMENDATIONS|FAIL)
      - Update manifest gate_results.assembly_plan_validation, status="draft" (initial) then "in-progress" after G0 pass
      - `validate-feature-evidence.py --stage G0 --run-id {RUN_ID}` exit 0

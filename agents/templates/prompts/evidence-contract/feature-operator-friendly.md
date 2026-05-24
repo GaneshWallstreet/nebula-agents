@@ -33,7 +33,7 @@ Use these tier defaults exactly:
 - `clean: 1, 2`
 - `drift-reconcile: 3, 4`
 
-`PRIMARY_SPEC` is `{FEATURE_PATH}/feature-assembly-plan.md`. Start only when the plan action is already signed off, `PRIMARY_SPEC` exists, the required runtime containers are healthy per `feature.md`, `python3 {PRODUCT_ROOT}/scripts/kg/validate.py` already exits 0, and `RUN_FOLDER` is initialized with an empty skeleton (no stale artifacts).
+`PRIMARY_SPEC` is `{FEATURE_PATH}/feature-assembly-plan.md`. It is **not** a precondition — `feature-assembly-plan.md` is not a `plan` deliverable; it is authored in G0 Step 0 of this run (per `agents/actions/feature.md` Step 0 and `plan.md`). Start only when the plan action is already signed off (feature stories and architecture are available), the required runtime containers are healthy per `feature.md`, `python3 {PRODUCT_ROOT}/scripts/kg/validate.py` already exits 0, and `RUN_FOLDER` is initialized with an empty skeleton (no stale artifacts). On a clean first run `PRIMARY_SPEC` does not exist yet — G0 creates it; on a `drift-reconcile` or evidence-only rerun it already exists and G0 reconciles it.
 
 Load context in this order and navigate instead of eager-loading:
 1. `agents/ROUTER.md`
@@ -41,7 +41,7 @@ Load context in this order and navigate instead of eager-loading:
 3. `agents/docs/AGENT-USE.md`
 4. `agents/actions/feature.md`
 5. `python3 {PRODUCT_ROOT}/scripts/kg/lookup.py {FEATURE_ID} --tier {start_tier} --run-id {RUN_ID} --telemetry-file {PRODUCT_ROOT}/.kg-state/telemetry.jsonl`
-6. `{FEATURE_PATH}/**` with `PRIMARY_SPEC` treated as required reading
+6. `{FEATURE_PATH}/**` — `PRIMARY_SPEC` is required reading once it exists; on a clean first run it is authored in G0 Step 0 before any slice work
 
 Treat `lookup.py` as a FIRST-PASS scope resolver only. Raw artifacts win on conflict. Open these only when lookup links them, the current gate needs them, or drift repair requires them: `{PRODUCT_ROOT}/planning-mds/knowledge-graph/solution-ontology.yaml`, `{PRODUCT_ROOT}/planning-mds/api/<openapi-spec>.yaml`, `{PRODUCT_ROOT}/planning-mds/security/authorization-matrix.md`, `{PRODUCT_ROOT}/planning-mds/security/policies/policy.csv`, `{PRODUCT_ROOT}/planning-mds/knowledge-graph/*.yaml` beyond the already returned subset, and `agents/<role>/references/**` only with a `ROUTER.md` row match.
 
@@ -76,7 +76,7 @@ Keep ownership strict:
 
 Follow these gates exactly. Manifest `status` transitions: `draft` at G0, `in-progress` from G1 through G4.6 candidate, `approved` only at G4.7 when `latest-run.json` is written, `superseded` later only when a newer approved run replaces this one.
 
-- `G0 ARCHITECT ASSEMBLY PLAN VALIDATION` — write `g0-assembly-plan-validation.md`; run `validate-feature-evidence.py --stage G0 --run-id {RUN_ID}` exit 0; flip manifest `status` to `in-progress` after G0 passes
+- `G0 ARCHITECT ASSEMBLY PLAN AUTHORING + VALIDATION` — **Step 0 (author):** if `PRIMARY_SPEC` is absent, the Architect authors `{FEATURE_PATH}/feature-assembly-plan.md` from `agents/templates/feature-assembly-plan-template.md` using the feature stories, `BLUEPRINT.md`, `SOLUTION-PATTERNS.md`, and API contracts (per `feature.md` Step 0); on `drift-reconcile`/rerun, reconcile the existing plan instead of overwriting and log it via `workstate.py decision --topic plan-story-reconcile`. **Step 0.5 (validate):** check scope split, agent dependencies, integration checkpoints, and artifact ownership, and initialize the `Required Signoff Roles` matrix in `{FEATURE_PATH}/STATUS.md`. Then write `g0-assembly-plan-validation.md`; run `validate-feature-evidence.py --stage G0 --run-id {RUN_ID}` exit 0; flip manifest `status` to `in-progress` after G0 passes
 - `G1 RUNTIME PREFLIGHT` — write `g1-runtime-preflight.md` if `runtime_bearing=true`, else record the manifest omission; run `--stage G1`
 - `G2 SELF-REVIEW + QE + DEPLOYABILITY` — first, reconcile the manifest conditional booleans against discovered scope. Set `frontend_in_scope=true` if any `changed_paths[]` entry matches `experience/**` or other frontend globs (§7); `runtime_bearing=true` for `engine/**` runtime/tests/AI runtime globs; `deployment_config_changed=true` for Dockerfile, docker-compose, `.github/workflows`, `ci/`, env/config globs, or migrations; `security_sensitive_scope=true` for auth/identity/permissions/security/secrets globs. Any flip from false→true also forces the corresponding required role and artifact per §7. Then write `g2-self-review.md`, `test-plan.md`, `test-execution-report.md`, `coverage-report.md` (file must exist even when waived), and `deployability-check.md`; run `--stage G2`. Booleans that change after G2 force re-running `--stage G2`.
 - `G3 CODE + SECURITY REVIEW (parallel)` — write `code-review-report.md` and `security-review-report.md` when required; run `--stage G3`
