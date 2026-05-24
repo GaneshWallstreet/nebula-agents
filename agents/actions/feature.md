@@ -92,7 +92,7 @@ Load in this order when the work is feature-scoped:
 - Editing shared semantics without prior `blast.py <node-id>`
 - Continuing after a runtime-blocked failure without re-running runtime preflight
 - Skipping any gate from `G0` through `G4.7`
-- Declaring done without the explicit Product Manager role switch at `G4.6`
+- Declaring done without the explicit Product Manager role switch at `G4.7`
 - Widening scope outside the current feature
 - Climbing past `max_auto_tier` without recording `workstate.py escalate`
 
@@ -104,8 +104,67 @@ Load in this order when the work is feature-scoped:
 - `G3 CODE + SECURITY REVIEW` — Step 3 Parallel Reviews
 - `G4 APPROVAL` — Step 4 Feature Review
 - `G4.5 SIGNOFF` — Step 4.5 Required reviewer evidence verification
-- `G4.6 PM CLOSEOUT` — Step 4.6 Product Manager closeout and archive reconciliation
-- `G4.7 TRACKER SYNC` — Step 4.7 Final tracker validation
+- `G4.6 CANDIDATE EVIDENCE VALIDATION` — Step 4.6 pre-closeout evidence validation and tracker sync
+- `G4.7 PM CLOSEOUT` — Step 4.7 Product Manager closeout, supersession, and final validation
+
+## Canonical Evidence Package
+
+Every governed completed-terminal feature run writes its evidence into the canonical package shape (§10) at:
+
+```text
+{PRODUCT_ROOT}/planning-mds/operations/evidence/F####-{slug}/{RUN_ID}/
+```
+
+The §17 stage matrix dictates which artifacts must exist at each gate. The full set produced by closeout:
+
+- `README.md` (template: `agents/templates/feature-evidence-readme-template.md`)
+- `evidence-manifest.json` (template: `agents/templates/evidence-manifest-template.json`)
+- `action-context.md`
+- `feature-action-execution.md` (template: `agents/templates/feature-action-execution-template.md`)
+- `artifact-trace.md` (template: `agents/templates/artifact-trace-template.md`)
+- `gate-decisions.md` (template: `agents/templates/gate-decisions-template.md`)
+- `commands.log` (schema: `agents/templates/commands-log-template.md`)
+- `lifecycle-gates.log` (schema: `agents/templates/lifecycle-gates-log-template.md`)
+- `g0-assembly-plan-validation.md` (Architect output at G0)
+- `g1-runtime-preflight.md` (template: `agents/templates/runtime-preflight-template.md`; required only when `runtime_bearing = true`)
+- `g2-self-review.md` (template: `agents/templates/self-review-template.md`)
+- `test-plan.md` (template: `agents/templates/test-plan-template.md`)
+- `test-execution-report.md` (template: `agents/templates/test-execution-report-template.md`)
+- `coverage-report.md` (template: `agents/templates/coverage-report-template.md`)
+- `deployability-check.md` (template: `agents/templates/deployability-check-template.md`)
+- `code-review-report.md` (template: `agents/templates/code-review-report-template.md`)
+- `security-review-report.md` (template: `agents/templates/security-review-template.md`; required when `security_sensitive_scope = true` or Security Reviewer is required)
+- `signoff-ledger.md` (template: `agents/templates/signoff-ledger-template.md`)
+- `pm-closeout.md` (template: `agents/templates/pm-closeout-template.md`)
+
+The feature evidence root also carries `latest-run.json` (§12) once the run is approved.
+
+Run-ID format: `YYYY-MM-DD-XXXXXXXX` per §11 — date is local-at-session-start; `XXXXXXXX` is 8-char hex from cryptographic randomness (e.g. `secrets.token_hex(4)`). The run ID is recorded in `action-context.md` and the manifest at G0 and carried unchanged through closeout. Validators must not infer the active run by sorting folders; see §17 for run-resolution rules.
+
+### Closeout Supersession-And-Publish Sequence (§17 step 4)
+
+When this action writes a new `latest-run.json` at G4.7/closeout, perform exactly this order:
+
+1. Invoke `agents/product-manager/scripts/patch-prior-manifest.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --new-run-id {RUN_ID}` to mark every prior approved manifest for this feature as `superseded`. The helper is idempotent and exits 0 with no priors.
+2. Only after step 1 succeeds, write `latest-run.json` pointing at the new run.
+
+If step 1 fails, do not proceed to step 2. Surface the failure with the operator runbook reference (`feature-evidence-package-standardization-plan-v2.md` §28 Phase 5 "Partial-closeout recovery"). Validator catch-rule `two_approved_runs_without_supersession_fails` enforces the invariant as defense in depth.
+
+### Per-Gate Evidence Validation (§17 / §24)
+
+Run `validate-feature-evidence.py` after producing each gate's artifacts so missing evidence is caught at the gate, not at closeout. Use the in-progress `--run-id` mode for gates before `latest-run.json` exists.
+
+| Gate | Command | Stage |
+|------|---------|-------|
+| G0   | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G0` | `G0` |
+| G1   | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G1` | `G1` |
+| G2   | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G2` | `G2` |
+| G3   | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G3` | `G3` |
+| G4.5 | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G4.5` | `G4.5` |
+| G4.6 | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G4.6` | `G4.6` candidate validation; runs **before** tracker sync per §17 step 1-2 |
+| G4.7 | `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --stage closeout` | After §17 step 4 completes — `latest-run.json` and `pm-closeout.md` must exist; tracker results must be in `lifecycle-gates.log` |
+
+Stage-validation failures must be repaired before advancing the gate. Do not skip stage validation even when the missing artifact "will land later" — §17's stage matrix declares exactly which artifacts must exist by stage.
 
 ## Stop Conditions
 
@@ -122,11 +181,13 @@ Load in this order when the work is feature-scoped:
 Run in this order:
 
 1. Applicable backend / frontend / AI / QE runtime commands for changed surfaces, with evidence paths recorded under `{PRODUCT_ROOT}/planning-mds/operations/evidence/**`
-2. `python3 agents/product-manager/scripts/validate-trackers.py`
-3. `python3 agents/product-manager/scripts/generate-story-index.py {PRODUCT_ROOT}/planning-mds/features/` when stories changed
-4. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --regenerate-symbols` when code in bound files changed
-5. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --write-coverage-report` when KG changed
-6. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-symbols`
+2. `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage G4.6` (candidate validation before tracker sync per §17 step 1)
+3. `python3 agents/product-manager/scripts/validate-trackers.py` (calls feature-evidence at `--stage G4.6` per §22; appends tracker results to `lifecycle-gates.log`)
+4. After §17 step 4 completes (`patch-prior-manifest.py` then `latest-run.json`): `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --stage closeout`
+5. `python3 agents/product-manager/scripts/generate-story-index.py {PRODUCT_ROOT}/planning-mds/features/` when stories changed
+6. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --regenerate-symbols` when code in bound files changed
+7. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --write-coverage-report` when KG changed
+8. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-symbols`
 7. `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-drift`
 8. `python3 agents/scripts/validate_templates.py`
 
